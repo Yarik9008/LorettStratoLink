@@ -1,9 +1,4 @@
-"""StratoLink transport — stream parser for FEC packets and TELEM.
-
-Supports two formats in one byte stream:
-  - FEC packets  (sync 0x55, type 0x68, fixed 256 bytes)
-  - TELEM packets (sync 0x5A 0xA5, fixed 10 bytes)
-"""
+"""Транспорт LorettLink — разбор потока на FEC-пакеты (256 Б) и TELEM (10 Б, sync 0xA55A)."""
 
 import struct
 from dataclasses import dataclass

@@ -1,4 +1,4 @@
-"""Custom widgets for StratoLink Receiver / Transmitter."""
+"""Пользовательские виджеты: матрица блоков ChunkMatrixWidget для приёмника и передатчика."""
 
 import math
 

@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""LORett StratoLink — Приёмник с erasure-FEC (Reed-Solomon).
+"""LorettLink — Приёмник с erasure-FEC (Reed-Solomon).
 
-Принимает FEC-блоки по COM / TCP / симуляции.
-Когда получено >= K любых блоков из N, восстанавливает файл 1:1.
+Принимает FEC-блоки по COM (USB-UART от радиомодуля) или TCP.
+Парсит поток: FEC-пакеты 256 байт + TELEM 10 байт.
+Когда получено >= K любых блоков из N, восстанавливает файл Reed-Solomon декодером 1:1.
 """
 
 import sys
-import math
 import time
-import os
 import socket
-import threading
 from pathlib import Path
 from typing import Optional
 
+# Общая папка shared (erasure_fec, protocol, theme_manager)
 _SHARED = str(Path(__file__).resolve().parent.parent / "shared")
 if _SHARED not in sys.path:
     sys.path.insert(0, _SHARED)
@@ -26,8 +25,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QPixmap
 
-from erasure_fec import FECPacket, ErasureEncoder, ErasureDecoder
-from protocol import StreamParser, TelemInfo, build_telem
+from erasure_fec import FECPacket, ErasureDecoder
+from protocol import StreamParser, TelemInfo
 from theme_manager import Theme, load_theme, save_theme, apply_theme
 
 try:
@@ -41,7 +40,7 @@ UI_PATH = Path(__file__).parent / "mainwindow.ui"
 
 
 # ═══════════════════════════════════════════════════════════════
-#  Serial worker
+#  Воркер чтения COM-порта (приём от радиомодуля / USB-UART)
 # ═══════════════════════════════════════════════════════════════
 
 class SerialWorker(QThread):
@@ -57,6 +56,7 @@ class SerialWorker(QThread):
         self._ser = None
 
     def run(self):
+        """Открытие порта, цикл чтения порциями по 1024 байт, при ошибке — сигнал и закрытие."""
         try:
             self._ser = serial.Serial(self.port, self.baud, timeout=0.1)
             self._running = True
@@ -73,11 +73,12 @@ class SerialWorker(QThread):
             self.connection_changed.emit(False)
 
     def stop(self):
+        """Выход из цикла run()."""
         self._running = False
 
 
 # ═══════════════════════════════════════════════════════════════
-#  TCP server worker
+#  Воркер TCP-сервера (приём от наземного передатчика по сети)
 # ═══════════════════════════════════════════════════════════════
 
 class TcpServerWorker(QThread):
@@ -93,6 +94,7 @@ class TcpServerWorker(QThread):
         self._server_sock = None
 
     def run(self):
+        """Слушаем порт, принимаем одного клиента, читаем данные до отключения, затем снова accept."""
         try:
             self._server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -128,6 +130,7 @@ class TcpServerWorker(QThread):
             self.connection_changed.emit(False)
 
     def stop(self):
+        """Остановка цикла и закрытие сокета."""
         self._running = False
         if self._server_sock:
             try:
@@ -137,43 +140,11 @@ class TcpServerWorker(QThread):
 
 
 # ═══════════════════════════════════════════════════════════════
-#  Local FEC simulation worker
-# ═══════════════════════════════════════════════════════════════
-
-class SimulatorWorker(QThread):
-    data_generated = pyqtSignal(bytes)
-    sim_finished = pyqtSignal()
-
-    def __init__(self, path: str, delay_ms: int = 30, fec_ratio: float = 0.25):
-        super().__init__()
-        self.path = path
-        self.delay_ms = delay_ms
-        self.fec_ratio = fec_ratio
-        self._running = False
-
-    def run(self):
-        self._running = True
-        enc = ErasureEncoder("SIMUL", int(time.time()) & 0xFF, self.fec_ratio)
-        packets = enc.encode_file(self.path)
-        time.sleep(0.2)
-        for pkt in packets:
-            if not self._running:
-                return
-            self.data_generated.emit(pkt.to_bytes())
-            if self.delay_ms > 0:
-                time.sleep(self.delay_ms / 1000.0)
-        time.sleep(0.1)
-        self.sim_finished.emit()
-
-    def stop(self):
-        self._running = False
-
-
-# ═══════════════════════════════════════════════════════════════
-#  Helpers
+#  Вспомогательные функции
 # ═══════════════════════════════════════════════════════════════
 
 def _make_card(title, description=""):
+    """Карточка с заголовком и опциональным описанием для вкладки «Настройки»."""
     card = QFrame(); card.setProperty("class", "card")
     lay = QVBoxLayout(card); lay.setContentsMargins(20, 20, 20, 20); lay.setSpacing(12)
     h = QLabel(title); h.setProperty("class", "heading"); lay.addWidget(h)
@@ -184,23 +155,24 @@ def _make_card(title, description=""):
 
 
 # ═══════════════════════════════════════════════════════════════
-#  Main window
+#  Главное окно приёмника
 # ═══════════════════════════════════════════════════════════════
 
 class MainWindow(QMainWindow):
+    """Окно: COM/TCP, телеметрия, матрица блоков, превью изображения, лог, сохранение файла."""
+
     def __init__(self):
         super().__init__()
         uic.loadUi(str(UI_PATH), self)
 
-        self.parser = StreamParser()
-        self.decoder = ErasureDecoder()
+        self.parser = StreamParser()   # разбор потока на FEC- и TELEM-пакеты
+        self.decoder = ErasureDecoder()  # накопление блоков и RS-декодирование
         self.serial_worker: Optional[SerialWorker] = None
         self.tcp_worker: Optional[TcpServerWorker] = None
-        self.sim_worker: Optional[SimulatorWorker] = None
-        self._start_time: Optional[float] = None
+        self._start_time: Optional[float] = None  # для расчёта скорости приёма
         self._bytes_rx = 0
-        self._last_preview_cnt = 0
-        self._recovery_done = False
+        self._last_preview_cnt = 0   # чтобы не перерисовывать превью без изменений
+        self._recovery_done = False  # флаг: файл уже восстановлен RS-декодером
 
         self._setup_tabs()
         self._connect_signals()
@@ -244,17 +216,6 @@ class MainWindow(QMainWindow):
         ra.addWidget(self.cb_theme); ra.addStretch(); la.addLayout(ra)
         root.addWidget(card_a)
 
-        card_s, ls = _make_card("Симуляция", "Задержка и FEC overhead для локальной симуляции.")
-        rs = QHBoxLayout(); rs.setSpacing(12)
-        rs.addWidget(QLabel("Задержка:"))
-        self.sb_delay.show(); rs.addWidget(self.sb_delay)
-        rs.addWidget(QLabel("FEC:"))
-        self.sb_fec_sim = QSpinBox()
-        self.sb_fec_sim.setRange(5, 100); self.sb_fec_sim.setValue(25); self.sb_fec_sim.setSuffix(" %")
-        rs.addWidget(self.sb_fec_sim)
-        rs.addStretch(); ls.addLayout(rs)
-        root.addWidget(card_s)
-
         root.addStretch()
         return page
 
@@ -266,7 +227,6 @@ class MainWindow(QMainWindow):
         self.btn_refresh.clicked.connect(self._refresh_ports)
         self.btn_connect.clicked.connect(self._toggle_serial)
         self.btn_tcp.clicked.connect(self._toggle_tcp)
-        self.btn_sim.clicked.connect(self._start_sim)
         self.btn_save.clicked.connect(self._save_image)
 
     # ── helpers ──────────────────────────────────────────────
@@ -335,32 +295,10 @@ class MainWindow(QMainWindow):
         else:
             self._append_log("Клиент отключился")
 
-    # ── simulation ───────────────────────────────────────────
-
-    def _start_sim(self):
-        if self.sim_worker and self.sim_worker.isRunning():
-            self.sim_worker.stop(); self.sim_worker.wait(2000)
-            self.btn_sim.setText("Симуляция..."); return
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Выберите изображение", "",
-            "Изображения (*.jpg *.jpeg *.webp *.png *.bmp);;Все файлы (*)")
-        if not path: return
-        self._reset_state()
-        fec = self.sb_fec_sim.value() / 100.0 if hasattr(self, "sb_fec_sim") else 0.25
-        self.sim_worker = SimulatorWorker(path, self.sb_delay.value(), fec)
-        self.sim_worker.data_generated.connect(self._on_raw_data)
-        self.sim_worker.sim_finished.connect(self._on_sim_done)
-        self.sim_worker.start()
-        self.btn_sim.setText("Остановить")
-        self._append_log(f"Симуляция: <b>{os.path.basename(path)}</b>")
-
-    def _on_sim_done(self):
-        self.btn_sim.setText("Симуляция...")
-        self._append_log("Симуляция завершена")
-
     # ── packet processing ────────────────────────────────────
 
     def _reset_state(self):
+        """Сброс парсера, декодера, матрицы и превью при новом изображении или переподключении."""
         self.parser.reset()
         self.decoder.reset()
         self.matrix.clear_all()
@@ -372,6 +310,7 @@ class MainWindow(QMainWindow):
         self.lbl_chunks.setText("Ожидание FEC...")
 
     def _on_raw_data(self, raw: bytes):
+        """Сырые байты от COM/TCP: передаём в парсер, обрабатываем FEC и TELEM."""
         self._bytes_rx += len(raw)
         if self._start_time is None:
             self._start_time = time.time()
@@ -382,6 +321,7 @@ class MainWindow(QMainWindow):
                 self._handle_telem(obj)
 
     def _handle_fec(self, pkt: FECPacket):
+        """Добавить FEC-пакет в декодер, обновить матрицу/прогресс, при достаточном числе блоков — восстановить файл."""
         new_image = (self.decoder.image_id is not None
                      and pkt.image_id != self.decoder.image_id)
         if new_image:
@@ -419,6 +359,7 @@ class MainWindow(QMainWindow):
             self._try_recover()
 
     def _try_recover(self):
+        """Запуск Reed-Solomon декодирования: из любых K из N блоков восстанавливаем файл."""
         self._append_log("Запуск RS-декодирования...")
         result = self.decoder.decode()
         if result is not None:
@@ -433,6 +374,7 @@ class MainWindow(QMainWindow):
             self._append_log("<b style='color:#e57373'>RS decode failed</b>")
 
     def _handle_telem(self, t: TelemInfo):
+        """Обновление полей телеметрии (RSSI, SNR, мощность TX) и полоски RSSI."""
         self.lbl_rssi.setText(f"RSSI: {t.rssi} дБм")
         self.lbl_snr.setText(f"SNR: {t.snr / 4:.1f} дБ")
         self.lbl_txpower.setText(f"TX: {t.tx_power} дБм")
@@ -441,14 +383,12 @@ class MainWindow(QMainWindow):
     # ── preview & save ───────────────────────────────────────
 
     def _refresh_preview(self):
+        """Периодически (по таймеру) обновлять превью: собрать данные из декодера и отобразить как изображение."""
         cnt = self.decoder.received_count
         if cnt == 0 or cnt == self._last_preview_cnt:
             return
         self._last_preview_cnt = cnt
-        if self._recovery_done:
-            data = self.decoder.assemble_partial()
-        else:
-            data = self.decoder.assemble_partial()
+        data = self.decoder.assemble_partial()
         if not data:
             return
         px = QPixmap()
@@ -457,6 +397,7 @@ class MainWindow(QMainWindow):
                 self.img_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
     def _save_image(self):
+        """Сохранить восстановленные данные в файл через диалог выбора имени."""
         if self.decoder.received_count == 0: return
         data = self.decoder.assemble_partial()
         if not data: return
@@ -472,7 +413,7 @@ class MainWindow(QMainWindow):
     # ── cleanup ──────────────────────────────────────────────
 
     def closeEvent(self, event):
-        for w in (self.serial_worker, self.tcp_worker, self.sim_worker):
+        for w in (self.serial_worker, self.tcp_worker):
             if w and w.isRunning():
                 w.stop(); w.wait(2000)
         event.accept()

@@ -1,4 +1,4 @@
-"""Centralized theme management."""
+"""Управление темой оформления (тёмная/светлая), сохранение в QSettings."""
 
 from enum import Enum
 from pathlib import Path
@@ -13,7 +13,7 @@ class Theme(Enum):
 
 
 def load_theme() -> Theme:
-    value = QSettings("LORett", "StratoLink").value("ui/theme", "dark")
+    value = QSettings("LorettLink", "LorettLink").value("ui/theme", "dark")
     try:
         return Theme(value)
     except ValueError:
@@ -21,7 +21,7 @@ def load_theme() -> Theme:
 
 
 def save_theme(theme: Theme) -> None:
-    QSettings("LORett", "StratoLink").setValue("ui/theme", theme.value)
+    QSettings("LorettLink", "LorettLink").setValue("ui/theme", theme.value)
 
 
 def apply_theme(app: QApplication, theme: Theme) -> None:

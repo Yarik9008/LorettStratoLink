@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>TransmitterWindow</class>
- <widget class="QMainWindow" name="TransmitterWindow">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
   <property name="windowTitle">
-   <string>LORett StratoLink — Передатчик (симулятор)</string>
+   <string>LorettLink — Приёмник</string>
   </property>
   <property name="minimumSize">
-   <size><width>880</width><height>620</height></size>
+   <size><width>900</width><height>640</height></size>
   </property>
 
   <widget class="QWidget" name="centralwidget">
@@ -17,38 +17,63 @@
     <property name="rightMargin"><number>6</number></property>
     <property name="bottomMargin"><number>6</number></property>
 
-    <!-- ═══ Connection ═══ -->
+    <!-- Connection: COM + TCP -->
     <item>
-     <widget class="QGroupBox" name="groupConnection">
-      <property name="title"><string>Подключение</string></property>
+     <widget class="QFrame" name="frameConnection">
+      <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
       <layout class="QHBoxLayout" name="connLayout">
-       <property name="leftMargin"><number>8</number></property>
-       <property name="topMargin"><number>4</number></property>
-       <property name="rightMargin"><number>8</number></property>
-       <property name="bottomMargin"><number>4</number></property>
+       <property name="leftMargin"><number>12</number></property>
+       <property name="topMargin"><number>8</number></property>
+       <property name="rightMargin"><number>12</number></property>
+       <property name="bottomMargin"><number>8</number></property>
+       <property name="spacing"><number>12</number></property>
 
        <item>
-        <widget class="QLabel"><property name="text"><string>IP:</string></property></widget>
+        <widget class="QLabel"><property name="text"><string>COM:</string></property></widget>
        </item>
        <item>
-        <widget class="QLineEdit" name="edit_ip">
-         <property name="text"><string>127.0.0.1</string></property>
-         <property name="minimumSize"><size><width>110</width><height>0</height></size></property>
+        <widget class="QComboBox" name="cb_port">
+         <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel"><property name="text"><string>Port:</string></property></widget>
+        <widget class="QComboBox" name="cb_baud">
+         <property name="currentText"><string>115200</string></property>
+         <additem><property name="text"><string>9600</string></property></additem>
+         <additem><property name="text"><string>115200</string></property></additem>
+         <additem><property name="text"><string>230400</string></property></additem>
+         <additem><property name="text"><string>460800</string></property></additem>
+        </widget>
        </item>
        <item>
-        <widget class="QSpinBox" name="sb_port">
+        <widget class="QPushButton" name="btn_refresh">
+         <property name="text"><string>Обновить</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_connect">
+         <property name="text"><string>Подключить</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel"><property name="text"><string>TCP:</string></property></widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="sb_tcp_port">
          <property name="minimum"><number>1024</number></property>
          <property name="maximum"><number>65535</number></property>
          <property name="value"><number>12000</number></property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btn_connect">
-         <property name="text"><string>Подключить</string></property>
+        <widget class="QPushButton" name="btn_tcp">
+         <property name="text"><string>Слушать</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_save">
+         <property name="text"><string>Сохранить</string></property>
+         <property name="enabled"><bool>false</bool></property>
         </widget>
        </item>
        <item>
@@ -60,63 +85,50 @@
      </widget>
     </item>
 
-    <!-- ═══ Transfer settings ═══ -->
+    <!-- Telem: RSSI / SNR / TX Power -->
     <item>
-     <widget class="QGroupBox" name="groupTransfer">
-      <property name="title"><string>Передача</string></property>
-      <layout class="QHBoxLayout" name="txLayout">
-       <property name="leftMargin"><number>8</number></property>
+     <widget class="QFrame" name="frameTelem">
+      <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+      <layout class="QHBoxLayout" name="telemLayout">
+       <property name="leftMargin"><number>12</number></property>
        <property name="topMargin"><number>4</number></property>
-       <property name="rightMargin"><number>8</number></property>
+       <property name="rightMargin"><number>12</number></property>
        <property name="bottomMargin"><number>4</number></property>
-
+       <property name="spacing"><number>12</number></property>
        <item>
-        <widget class="QLabel"><property name="text"><string>Файл:</string></property></widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="edit_file">
-         <property name="readOnly"><bool>true</bool></property>
-         <property name="placeholderText"><string>Выберите JPEG...</string></property>
+        <widget class="QLabel" name="lbl_rssi">
+         <property name="text"><string>RSSI: — дБм</string></property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btn_browse">
-         <property name="text"><string>Обзор...</string></property>
+        <widget class="QProgressBar" name="bar_rssi">
+         <property name="minimum"><number>-140</number></property>
+         <property name="maximum"><number>-50</number></property>
+         <property name="value"><number>-100</number></property>
+         <property name="textVisible"><bool>false</bool></property>
+         <property name="maximumSize"><size><width>120</width><height>20</height></size></property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel"><property name="text"><string>Chunk:</string></property></widget>
-       </item>
-       <item>
-        <widget class="QSpinBox" name="sb_chunk">
-         <property name="minimum"><number>32</number></property>
-         <property name="maximum"><number>224</number></property>
-         <property name="value"><number>200</number></property>
-         <property name="suffix"><string> Б</string></property>
+        <widget class="QLabel" name="lbl_snr">
+         <property name="text"><string>SNR: — дБ</string></property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel"><property name="text"><string>Задержка:</string></property></widget>
-       </item>
-       <item>
-        <widget class="QSpinBox" name="sb_delay">
-         <property name="minimum"><number>0</number></property>
-         <property name="maximum"><number>5000</number></property>
-         <property name="value"><number>30</number></property>
-         <property name="suffix"><string> мс</string></property>
+        <widget class="QLabel" name="lbl_txpower">
+         <property name="text"><string>TX: — дБм</string></property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btn_send">
-         <property name="text"><string>Начать передачу</string></property>
-         <property name="enabled"><bool>false</bool></property>
-        </widget>
+        <spacer><property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+        </spacer>
        </item>
       </layout>
      </widget>
     </item>
 
-    <!-- ═══ Splitter ═══ -->
+    <!-- Splitter: matrix | image -->
     <item>
      <widget class="QSplitter" name="splitter">
       <property name="orientation"><enum>Qt::Horizontal</enum></property>
@@ -133,8 +145,8 @@
         <property name="rightMargin"><number>0</number></property>
         <property name="bottomMargin"><number>0</number></property>
         <item>
-         <widget class="QLabel" name="lbl_matrix_title">
-          <property name="text"><string>Матрица чанков</string></property>
+         <widget class="QLabel">
+          <property name="text"><string>Матрица блоков</string></property>
           <property name="alignment"><set>Qt::AlignCenter</set></property>
           <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize><bold>true</bold></font></property>
          </widget>
@@ -146,12 +158,12 @@
             <horstretch>1</horstretch><verstretch>1</verstretch>
            </sizepolicy>
           </property>
-          <property name="minimumSize"><size><width>180</width><height>120</height></size></property>
+          <property name="minimumSize"><size><width>200</width><height>140</height></size></property>
          </widget>
         </item>
         <item>
          <widget class="QLabel" name="lbl_chunks">
-          <property name="text"><string>Ожидание...</string></property>
+          <property name="text"><string>Ожидание FEC...</string></property>
           <property name="alignment"><set>Qt::AlignCenter</set></property>
          </widget>
         </item>
@@ -188,15 +200,18 @@
      </widget>
     </item>
 
-    <!-- ═══ Progress ═══ -->
+    <!-- Progress -->
     <item>
      <widget class="QProgressBar" name="progress">
+      <property name="minimum"><number>0</number></property>
+      <property name="maximum"><number>1</number></property>
+      <property name="value"><number>0</number></property>
       <property name="textVisible"><bool>true</bool></property>
-      <property name="format"><string>  %p%  —  %v / %m чанков</string></property>
+      <property name="format"><string>  %p%  —  %v / %m блоков</string></property>
      </widget>
     </item>
 
-    <!-- ═══ Log ═══ -->
+    <!-- Log -->
     <item>
      <widget class="QTextEdit" name="log">
       <property name="readOnly"><bool>true</bool></property>

@@ -1,28 +1,11 @@
-"""Erasure-FEC file transfer — Reed-Solomon block erasure coding over GF(2^8).
+"""Erasure-FEC передача файлов — кодирование Reed-Solomon по GF(2^8).
 
-File is split into K data blocks. RS encoder generates parity blocks grouped
-so each RS codeword fits within GF(2^8) max of 255 symbols. Data blocks are
-interleaved across groups to spread burst losses.
+Файл разбивается на K блоков данных; кодер RS строит M блоков чётности по группам
+(лимит GF(2^8) — 255 символов). Блоки данных распределены по группам (интерливинг).
+Потеря до M_per_group блоков в группе восстанавливается декодером.
 
-Any loss of up to M_per_group blocks per group can be recovered.
-
-Packet format (256 bytes):
-  Offset  Size  Field
-  0       1     sync           0x55
-  1       1     type           0x68
-  2       4     callsign       base-40, big-endian
-  6       1     image_id       0-255
-  7       2     block_id       big-endian (0..N-1)
-  9       2     k_data         big-endian (data blocks count)
-  11      2     n_total        big-endian (K + total parity)
-  13      4     file_size      big-endian
-  17      1     file_type      0x01=JPEG, 0x02=WebP, 0x00=raw
-  18      1     m_per_group    parity blocks per RS group
-  19      1     num_groups     RS group count
-  20      200   payload
-  220     4     crc32          CRC-32 of bytes [1..219]
-  224     32    reserved
-  Total: 256 bytes
+Формат пакета: 256 байт (sync 0x55, type 0x68, callsign, image_id, block_id,
+k_data, n_total, file_size, file_type, m_per_group, num_groups, payload 200 Б, crc32, reserved).
 """
 
 import struct
