@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TransmitterWindow</class>
+ <widget class="QMainWindow" name="TransmitterWindow">
+  <property name="windowTitle">
+   <string>LORett StratoLink — Передатчик (симулятор)</string>
+  </property>
+  <property name="minimumSize">
+   <size><width>880</width><height>620</height></size>
+  </property>
+
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="rootLayout">
+    <property name="spacing"><number>6</number></property>
+    <property name="leftMargin"><number>6</number></property>
+    <property name="topMargin"><number>6</number></property>
+    <property name="rightMargin"><number>6</number></property>
+    <property name="bottomMargin"><number>6</number></property>
+
+    <!-- ═══ Connection ═══ -->
+    <item>
+     <widget class="QGroupBox" name="groupConnection">
+      <property name="title"><string>Подключение</string></property>
+      <layout class="QHBoxLayout" name="connLayout">
+       <property name="leftMargin"><number>8</number></property>
+       <property name="topMargin"><number>4</number></property>
+       <property name="rightMargin"><number>8</number></property>
+       <property name="bottomMargin"><number>4</number></property>
+
+       <item>
+        <widget class="QLabel"><property name="text"><string>IP:</string></property></widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="edit_ip">
+         <property name="text"><string>127.0.0.1</string></property>
+         <property name="minimumSize"><size><width>110</width><height>0</height></size></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel"><property name="text"><string>Port:</string></property></widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="sb_port">
+         <property name="minimum"><number>1024</number></property>
+         <property name="maximum"><number>65535</number></property>
+         <property name="value"><number>12000</number></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_connect">
+         <property name="text"><string>Подключить</string></property>
+        </widget>
+       </item>
+       <item>
+        <spacer><property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
+    <!-- ═══ Transfer settings ═══ -->
+    <item>
+     <widget class="QGroupBox" name="groupTransfer">
+      <property name="title"><string>Передача</string></property>
+      <layout class="QHBoxLayout" name="txLayout">
+       <property name="leftMargin"><number>8</number></property>
+       <property name="topMargin"><number>4</number></property>
+       <property name="rightMargin"><number>8</number></property>
+       <property name="bottomMargin"><number>4</number></property>
+
+       <item>
+        <widget class="QLabel"><property name="text"><string>Файл:</string></property></widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="edit_file">
+         <property name="readOnly"><bool>true</bool></property>
+         <property name="placeholderText"><string>Выберите JPEG...</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_browse">
+         <property name="text"><string>Обзор...</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel"><property name="text"><string>Chunk:</string></property></widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="sb_chunk">
+         <property name="minimum"><number>32</number></property>
+         <property name="maximum"><number>224</number></property>
+         <property name="value"><number>200</number></property>
+         <property name="suffix"><string> Б</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel"><property name="text"><string>Задержка:</string></property></widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="sb_delay">
+         <property name="minimum"><number>0</number></property>
+         <property name="maximum"><number>5000</number></property>
+         <property name="value"><number>30</number></property>
+         <property name="suffix"><string> мс</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_send">
+         <property name="text"><string>Начать передачу</string></property>
+         <property name="enabled"><bool>false</bool></property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
+    <!-- ═══ Splitter ═══ -->
+    <item>
+     <widget class="QSplitter" name="splitter">
+      <property name="orientation"><enum>Qt::Horizontal</enum></property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>1</horstretch><verstretch>1</verstretch>
+       </sizepolicy>
+      </property>
+
+      <widget class="QWidget" name="leftPanel">
+       <layout class="QVBoxLayout" name="leftLayout">
+        <property name="leftMargin"><number>0</number></property>
+        <property name="topMargin"><number>0</number></property>
+        <property name="rightMargin"><number>0</number></property>
+        <property name="bottomMargin"><number>0</number></property>
+        <item>
+         <widget class="QLabel" name="lbl_matrix_title">
+          <property name="text"><string>Матрица чанков</string></property>
+          <property name="alignment"><set>Qt::AlignCenter</set></property>
+          <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize><bold>true</bold></font></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="ChunkMatrixWidget" name="matrix">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>1</horstretch><verstretch>1</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize"><size><width>180</width><height>120</height></size></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lbl_chunks">
+          <property name="text"><string>Ожидание...</string></property>
+          <property name="alignment"><set>Qt::AlignCenter</set></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+
+      <widget class="QWidget" name="rightPanel">
+       <layout class="QVBoxLayout" name="rightLayout">
+        <property name="leftMargin"><number>0</number></property>
+        <property name="topMargin"><number>0</number></property>
+        <property name="rightMargin"><number>0</number></property>
+        <property name="bottomMargin"><number>0</number></property>
+        <item>
+         <widget class="QLabel">
+          <property name="text"><string>Изображение</string></property>
+          <property name="alignment"><set>Qt::AlignCenter</set></property>
+          <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize><bold>true</bold></font></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="img_label">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>1</horstretch><verstretch>1</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize"><size><width>200</width><height>200</height></size></property>
+          <property name="alignment"><set>Qt::AlignCenter</set></property>
+          <property name="styleSheet"><string notr="true">background:#1a1a1a; border:1px solid #444; border-radius:4px;</string></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+
+    <!-- ═══ Progress ═══ -->
+    <item>
+     <widget class="QProgressBar" name="progress">
+      <property name="textVisible"><bool>true</bool></property>
+      <property name="format"><string>  %p%  —  %v / %m чанков</string></property>
+     </widget>
+    </item>
+
+    <!-- ═══ Log ═══ -->
+    <item>
+     <widget class="QTextEdit" name="log">
+      <property name="readOnly"><bool>true</bool></property>
+      <property name="maximumSize"><size><width>16777215</width><height>140</height></size></property>
+      <property name="font"><font><family>Consolas</family><pointsize>9</pointsize></font></property>
+     </widget>
+    </item>
+
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+
+ <customwidgets>
+  <customwidget>
+   <class>ChunkMatrixWidget</class>
+   <extends>QWidget</extends>
+   <header>widgets</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
